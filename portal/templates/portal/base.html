@@ -1,0 +1,41 @@
+{% load static %}
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Mantenimiento ETDA{% endblock %}</title>
+<script defer src="{% static 'portal/interacciones.js' %}"></script>
+<link rel="stylesheet" href="{% static 'portal/style.css' %}">
+</head>
+<body class="{% if user.is_authenticated %}workspace{% else %}auth-page{% endif %}">
+<a class="skip" href="#contenido">Ir al contenido</a>
+<header class="top"><div class="shell nav">
+<a class="brand" href="{% url 'bandeja' %}">
+<span class="brand-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M9 9h1m4 0h1m-6 3h1m4 0h1"/></svg></span>
+<span>Mantenimiento <small>UNACH · Piloto ETDA</small></span></a>
+{% if user.is_authenticated %}<div class="workspace-label">Gestión de infraestructura</div>{% endif %}
+</div></header>
+{% if user.is_authenticated %}
+<aside class="sidebar" aria-label="Navegación">
+<div class="sidebar-section">Espacio de trabajo</div>
+<nav class="side-links" aria-label="Principal">
+<a href="{% url 'bandeja' %}" {% if request.resolver_match.url_name == "bandeja" %}class="active" aria-current="page"{% endif %}><span aria-hidden="true">▤</span> {% if user.is_staff %}Incidencias{% else %}Mis reportes{% endif %}</a>
+<a href="{% url 'nuevo' %}" {% if request.resolver_match.url_name == "nuevo" %}class="active" aria-current="page"{% endif %}><span aria-hidden="true">＋</span> Reportar incidencia</a>
+{% if user.is_staff %}
+<div class="sidebar-section">Seguimiento</div>
+<a href="{% url 'bandeja' %}?estado=revision">Pendientes de revisión</a>
+<a href="{% url 'bandeja' %}?estado=atencion">En atención</a>
+<a href="{% url 'bandeja' %}?estado=cerrado">Cerradas</a>
+{% endif %}
+</nav>
+<div class="account"><span class="avatar" aria-hidden="true">{{ user.username|first|upper }}</span><div><strong>{{ user.username }}</strong><small>{% if user.is_staff %}Mantenimiento{% else %}Reportante{% endif %}</small></div>
+<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="quiet">Salir</button></form></div>
+</aside>
+{% endif %}
+<main class="shell main" id="contenido">
+{% for message in messages %}<p class="message {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

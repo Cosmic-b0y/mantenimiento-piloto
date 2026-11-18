@@ -1,0 +1,23 @@
+{% extends "portal/base.html" %}
+{% block title %}Nuevo reporte · Mantenimiento ETDA{% endblock %}
+{% block content %}
+<div class="narrow">
+<a class="back" href="{% url 'bandeja' %}">← Volver a la bandeja</a>
+<div class="heading"><div><h1>Nuevo reporte</h1><p>Indica dónde ocurre la falla y describe lo que observaste.</p></div></div>
+<form method="post" enctype="multipart/form-data" class="panel form-card">
+{% csrf_token %}{{ form.non_field_errors }}
+<fieldset><legend>Ubicación</legend><div class="form-grid">
+<div class="field">{{ form.edificio.label_tag }}{{ form.edificio }}{{ form.edificio.errors }}</div>
+<div class="field">{{ form.zona.label_tag }}{{ form.zona }}{{ form.zona.errors }}</div>
+</div><div class="field">{{ form.activo.label_tag }}{{ form.activo }}{{ form.activo.errors }}</div></fieldset>
+<fieldset><legend>Descripción de la incidencia</legend>
+<div class="field">{{ form.descripcion.label_tag }}{{ form.descripcion }}{{ form.descripcion.errors }}
+<div class="field-meta"><small>Describe el objeto, la falla y cuándo la observaste.</small><small id="description-count" aria-live="off">0 / 2500</small></div></div>
+<div class="field upload-field">{{ form.evidencia.label_tag }}{{ form.evidencia }}{{ form.evidencia.errors }}
+<small>JPG o PNG, hasta 5 MB.</small><img id="photo-preview" alt="Vista previa de la foto adjunta" hidden></div>
+</fieldset>
+<div class="form-actions"><a class="button secondary" href="{% url 'bandeja' %}">Cancelar</a>
+<button class="button">Enviar reporte</button></div>
+</form>
+</div>
+{% endblock %}

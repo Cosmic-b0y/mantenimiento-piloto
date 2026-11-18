@@ -1,0 +1,11 @@
+{% extends "portal/base.html" %}
+{% block title %}Iniciar sesión · Mantenimiento ETDA{% endblock %}
+{% block content %}
+<div class="login panel section">
+<h1>Iniciar sesión</h1><p class="muted">Accede con tu cuenta del piloto.</p>
+<form class="stack" method="post">{% csrf_token %}{{ form.non_field_errors }}
+{% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+<input type="hidden" name="next" value="{{ next }}">
+<button class="button">Entrar</button></form>
+</div>
+{% endblock %}

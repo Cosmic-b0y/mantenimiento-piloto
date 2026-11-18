@@ -1,0 +1,60 @@
+{% extends "portal/base.html" %}
+{% block title %}Bandeja · Mantenimiento ETDA{% endblock %}
+{% block content %}
+<div class="heading">
+<div><h1>{% if user.is_staff %}Incidencias{% else %}Mis reportes{% endif %}</h1>
+<p>{% if user.is_staff %}Organiza la atención de los espacios y equipos del campus.{% else %}Consulta el estado de las incidencias que has reportado.{% endif %}</p></div>
+<a class="button" href="{% url 'nuevo' %}"><span aria-hidden="true">+</span> Nuevo reporte</a>
+</div>
+{% if user.is_staff %}
+<div class="metrics">
+<a href="?estado=escalados" class="metric urgent"><span>Escalamientos por revisar</span><strong>{{ escalados }}</strong><small>Atención prioritaria</small></a>
+<a href="?estado=revision" class="metric"><span>Requieren revisión</span><strong>{{ revision }}</strong><small>Validar y confirmar prioridad</small></a>
+<a href="?estado=sin_asignar" class="metric"><span>Sin asignar</span><strong>{{ sin_asignar }}</strong><small>Asignar un responsable</small></a>
+<a href="?estado=atencion" class="metric"><span>En atención</span><strong>{{ atencion }}</strong><small>Trabajo en curso</small></a>
+</div>
+{% endif %}
+<section class="panel">
+<div class="list-heading"><h2>Registro de incidencias <span class="count">{{ pagina.paginator.count }}</span></h2><span class="muted">{% if user.is_staff %}Prioridad más alta primero{% else %}Más recientes primero{% endif %}</span></div>
+<div class="view-tabs" aria-label="Vistas de incidencias">
+<a href="{% querystring estado='' pagina=None %}" {% if not estado %}aria-current="page"{% endif %}>Todas</a>
+{% if user.is_staff %}<a href="{% querystring estado='revision' pagina=None %}" {% if estado == "revision" %}aria-current="page"{% endif %}>Por revisar</a>{% endif %}
+<a href="{% querystring estado='atencion' pagina=None %}" {% if estado == "atencion" %}aria-current="page"{% endif %}>En atención</a>
+<a href="{% querystring estado='cerrado' pagina=None %}" {% if estado == "cerrado" %}aria-current="page"{% endif %}>Cerradas</a>
+</div>
+<form class="filters" method="get">
+<label>Buscar <input name="q" value="{{ consulta }}" placeholder="Folio, ubicación o descripción"></label>
+<label>Estado <select name="estado">
+<option value="">Todos</option>
+{% if user.is_staff %}<option value="escalados"{% if estado == "escalados" %} selected{% endif %}>Escalamientos por revisar</option><option value="revision"{% if estado == "revision" %} selected{% endif %}>Requieren revisión</option><option value="sin_asignar"{% if estado == "sin_asignar" %} selected{% endif %}>Sin asignar</option>{% endif %}
+{% for valor, etiqueta in estados %}<option value="{{ valor }}"{% if estado == valor %} selected{% endif %}>{{ etiqueta }}</option>{% endfor %}
+</select></label>
+{% if user.is_staff %}<label>Prioridad <select name="prioridad"><option value="">Todas</option>
+{% for valor in prioridades %}<option{% if prioridad == valor %} selected{% endif %}>{{ valor }}</option>{% endfor %}</select></label>{% endif %}
+<button class="button secondary">Filtrar</button>
+{% if estado or consulta or prioridad %}<a class="clear" href="{% url 'bandeja' %}">Limpiar</a>{% endif %}
+</form>
+{% if pagina.object_list %}
+<div class="table-wrap">
+<table><thead><tr><th>Reporte</th><th>Ubicación</th><th>Estado</th>{% if user.is_staff %}<th>Prioridad</th><th>Responsable</th>{% endif %}<th>Fecha</th></tr></thead>
+<tbody>
+{% for caso in pagina %}
+<tr class="{% if caso.escalado %}row-escalated{% endif %}"><td data-label="Reporte"><a class="report-link" href="{% url 'detalle' caso.pk %}">{{ caso.descripcion|truncatechars:67 }}</a><small class="folio">{{ caso.folio }}</small></td>
+<td data-label="Ubicación">{{ caso.zona }}<small>{{ caso.edificio }}</small></td>
+<td data-label="Estado"><span class="tag status-{{ caso.estado }}">{{ caso.get_estado_display }}</span></td>
+{% if user.is_staff %}<td data-label="Prioridad"><span class="tag {{ caso.prioridad|lower }}">{{ caso.prioridad }}</span>{% if caso.escalado %}<small class="alert-text">Escalado · revisar</small>{% endif %}</td>
+<td data-label="Responsable">{{ caso.responsable|default:"Sin asignar" }}</td>{% endif %}
+<td class="date" data-label="Fecha">{{ caso.creado|date:"d M, H:i" }}</td></tr>
+{% endfor %}
+</tbody></table>
+</div>
+{% else %}<div class="empty"><h2>Sin reportes para mostrar</h2>
+<p>{% if estado or consulta or prioridad %}Ajusta los filtros para ampliar la búsqueda.{% else %}Los reportes registrados aparecerán aquí con su estado.{% endif %}</p></div>{% endif %}
+{% if pagina.has_other_pages %}<div class="pagination">
+{% if pagina.has_previous %}<a href="{% querystring pagina=pagina.previous_page_number %}">Anterior</a>{% endif %}
+<span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+{% if pagina.has_next %}<a href="{% querystring pagina=pagina.next_page_number %}">Siguiente</a>{% endif %}
+</div>{% endif %}
+</section>
+{% endblock %}
+

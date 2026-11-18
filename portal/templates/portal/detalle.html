@@ -1,0 +1,67 @@
+{% extends "portal/base.html" %}
+{% block title %}Caso {{ caso.folio }} · Mantenimiento ETDA{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'bandeja' %}">{% if user.is_staff %}← Volver a la bandeja{% else %}← Volver a mis reportes{% endif %}</a>
+<div class="heading"><div><p class="folio">{{ caso.folio }}</p><h1>Incidencia en {{ caso.zona }}</h1><p>{{ caso.edificio }} · {{ caso.creado|date:"d M Y, H:i" }}</p></div>
+<span class="tag status-{{ caso.estado }}">{{ caso.get_estado_display }}</span></div>
+{% if caso.escalado and user.is_staff %}<p class="risk">Revisión prioritaria sugerida · {{ caso.decision.area }}</p>{% endif %}
+<nav class="detail-nav" aria-label="Secciones del caso"><a href="#reporte">Reporte</a>{% if user.is_staff %}<a href="#sugerencia">Análisis del agente</a><a href="#revision">Revisión</a>{% endif %}<a href="#historial">Historial</a></nav>
+<div class="detail">
+<div class="stack">
+<section class="panel section" id="reporte"><h2>Reporte original</h2>
+<p class="preserve">{{ caso.descripcion }}</p>
+{% if caso.activo %}<p class="muted">Activo {{ caso.activo }}</p>{% endif %}
+{% if caso.evidencia %}<a href="{% url 'evidencia' caso.pk %}">Descargar fotografía adjunta</a>{% endif %}
+</section>
+{% if user.is_staff %}
+<section class="panel section" id="sugerencia"><h2>Sugerencia del agente</h2>
+<dl class="facts"><div><dt>Categoría</dt><dd>{{ categoria_sugerida }}</dd></div>
+<div><dt>Prioridad preliminar</dt><dd><span class="tag {{ caso.decision.prioridad|lower }}">{{ caso.decision.prioridad }}</span></dd></div>
+<div><dt>Puntuación del clasificador</dt><dd>{{ caso.decision.confianza }} %</dd></div>
+<div><dt>Área sugerida</dt><dd>{{ caso.decision.area }}</dd></div></dl>
+{% if caso.decision.reglas %}<p class="muted">Reglas aplicadas · {{ caso.decision.reglas|join:", " }}</p>{% endif %}
+<ul class="reasons">{% for motivo in caso.decision.motivos_prioridad %}<li>{{ motivo|capfirst }}</li>{% endfor %}
+{% for motivo in caso.decision.motivos_revision %}<li>{{ motivo|capfirst }}</li>{% endfor %}</ul>
+</section>
+{% if caso.duplicado_de or candidatos or caso.reportes_vinculados.exists %}
+<section class="panel section"><h2>Reportes relacionados</h2>
+{% if caso.duplicado_de %}<p>Vinculado a <a href="{% url 'detalle' caso.duplicado_de_id %}">{{ caso.duplicado_de.folio }}</a>.</p>{% endif %}
+{% for vinculado in caso.reportes_vinculados.all %}<p><a href="{% url 'detalle' vinculado.pk %}">{{ vinculado.folio }}</a> · {{ vinculado.descripcion|truncatechars:90 }}</p>{% endfor %}
+{% for candidato in candidatos %}
+<form class="candidate" method="post" action="{% url 'vincular' caso.pk candidato.pk %}">
+{% csrf_token %}<div><a href="{% url 'detalle' candidato.pk %}">{{ candidato.folio }}</a><small>{{ candidato.descripcion|truncatechars:110 }}</small></div>
+<button class="button secondary">Confirmar vínculo</button>
+</form>
+{% endfor %}
+</section>
+{% endif %}
+{% endif %}
+{% if user == caso.reportante and caso.estado == "informacion" %}
+<section class="panel section"><h2>Agregar información</h2>
+<form class="stack" method="post" action="{% url 'ampliar' caso.pk %}">{% csrf_token %}
+<label>Aclaración <textarea name="nota" rows="3" maxlength="1500" required></textarea></label>
+<button class="button">Enviar aclaración</button></form></section>
+{% endif %}
+<section class="panel section" id="historial"><h2>Historial</h2>
+<ol class="timeline">{% for evento in caso.bitacora.all %}
+<li><strong>{{ evento.accion }}</strong><small>{{ evento.fecha|date:"d M Y, H:i" }}{% if user.is_staff %} · {{ evento.autor.username }}{% endif %}</small>
+{% if evento.nota %}<p class="preserve">{{ evento.nota }}</p>{% endif %}
+{% if user.is_staff %}{% for campo, valores in evento.cambios.items %}<small>{{ campo|capfirst }} · {{ valores.0|default:"—" }} → {{ valores.1|default:"—" }}</small>{% endfor %}{% endif %}
+</li>{% endfor %}</ol></section>
+</div>
+{% if user.is_staff %}
+<aside class="panel section review-panel" id="revision"><h2>Revisión de mantenimiento</h2>
+{% if categoria_confirmada %}
+<p>Prioridad confirmada <span class="tag {{ caso.prioridad|lower }}">{{ caso.prioridad }}</span></p>
+<p>{{ categoria_confirmada }} · {{ caso.responsable|default:"Sin asignar" }}</p>
+{% endif %}
+{% if form %}
+<form class="stack" method="post">{% csrf_token %}{{ form.non_field_errors }}
+{% for field in form.hidden_fields %}{{ field }}{{ field.errors }}{% endfor %}
+{% for field in form.visible_fields %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+<button class="button">Guardar revisión</button></form>
+{% else %}<p>El caso está cerrado.</p>{% endif %}
+</aside>
+{% endif %}
+</div>
+{% endblock %}
