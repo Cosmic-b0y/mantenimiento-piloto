@@ -14,3 +14,4 @@ documento/_docx_tmp/
 !.env.example
 *.log
 
+~$*
