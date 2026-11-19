@@ -78,3 +78,12 @@ Para repetir la comparación exploratoria con las decisiones históricas:
 
 En los 63 ejemplos incluidos, el portal coincide en las 63 categorías, detecta 9 de 15 críticos frente a 5 de 15 y genera 2 falsas alarmas frente a 4. Algunos ejemplos orientaron los ajustes, así que estas cifras sirven para verificar el cambio en esos casos. La validación con un conjunto nuevo sigue pendiente.
 
+
+## Interfaz visual v2
+
+- **Panel** (`/panel/`, solo personal de mantenimiento): indicadores, gráficas (Chart.js incluido en `portal/static/portal/vendor/`, funciona sin internet) y lista de casos que requieren atención.
+- **Tablero** (`/?vista=tablero`): los casos por estado, con color por prioridad. La vista de lista conserva su paginación.
+- **Filtros en vivo** en la bandeja, **modo claro/oscuro**, avisos que se cierran solos.
+- **Detalle**: avance del caso, prioridad destacada, señales detectadas, palabras del reporte resaltadas y reglas con explicación al pasar el cursor.
+- **Nuevo reporte**: ejemplos para empezar, medidor de detalle y foto por arrastrar y soltar.
+- Para llenar el panel con datos simulados: `python manage.py cargar_demo_volumen --cantidad 90` (después de `preparar_demo`).

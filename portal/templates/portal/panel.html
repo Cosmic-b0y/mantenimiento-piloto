@@ -1,0 +1,37 @@
+{% extends "portal/base.html" %}
+{% load static ui %}
+{% block title %}Panel · Mantenimiento ETDA{% endblock %}
+{% block extra_head %}<script defer src="{% static 'portal/vendor/chart.umd.js' %}"></script>{% endblock %}
+{% block content %}
+<div class="heading">
+<div><h1>Panel de control</h1><p>Vista general de la carga de trabajo. Los datos de este piloto son simulados.</p></div>
+<a class="button" href="{% url 'nuevo' %}"><span aria-hidden="true">+</span> Nuevo reporte</a>
+</div>
+
+<section class="kpis" aria-label="Indicadores principales">
+<a class="kpi crit" href="{% url 'bandeja' %}?estado=escalados"><span class="kpi-icon" aria-hidden="true">⚠</span><span class="kpi-label">Escalamientos abiertos</span><strong data-count="{{ escalados }}">{{ escalados }}</strong><small>Requieren valoración competente</small></a>
+<a class="kpi" href="{% url 'bandeja' %}?estado=revision"><span class="kpi-icon" aria-hidden="true">◎</span><span class="kpi-label">Casos abiertos</span><strong data-count="{{ abiertos }}">{{ abiertos }}</strong><small>{{ nuevos_hoy }} nuevo{{ nuevos_hoy|pluralize }} hoy</small></a>
+<a class="kpi warn" href="{% url 'bandeja' %}?estado=sin_asignar"><span class="kpi-icon" aria-hidden="true">☺</span><span class="kpi-label">Sin responsable</span><strong data-count="{{ sin_asignar }}">{{ sin_asignar }}</strong><small>Asignar para atender</small></a>
+<div class="kpi"><span class="kpi-icon" aria-hidden="true">⏱</span><span class="kpi-label">Primera revisión (mediana)</span><strong>{% if mediana_horas is None %}—{% else %}<span data-count="{{ mediana_horas }}" data-dec="1">{{ mediana_horas }}</span><em> h</em>{% endif %}</strong><small>Desde que se reporta</small></div>
+<div class="kpi ring-kpi"><div class="ring" style="--p:{{ tasa_cierre }}" role="img" aria-label="{{ tasa_cierre }} % de casos cerrados"><b>{{ tasa_cierre }}%</b></div><div><span class="kpi-label">Casos cerrados</span><small>{{ cerrados }} de {{ total }} reportes</small></div></div>
+</section>
+
+<div class="grid-panel">
+<section class="panel card wide"><div class="card-head"><h2>Reportes recibidos · últimos 14 días</h2><div class="legend"><span><i class="dot a"></i>Todos</span><span><i class="dot c"></i>Críticos</span></div></div><div class="chart-box h260"><canvas id="ch-dias" aria-label="Reportes por día" role="img"></canvas></div></section>
+<section class="panel card"><div class="card-head"><h2>Prioridad de casos abiertos</h2></div><div class="chart-box h260 center"><canvas id="ch-prioridad" aria-label="Distribución por prioridad" role="img"></canvas></div></section>
+<section class="panel card"><div class="card-head"><h2>Categorías abiertas</h2></div><div class="chart-box h260"><canvas id="ch-categorias" aria-label="Casos por categoría" role="img"></canvas></div></section>
+<section class="panel card"><div class="card-head"><h2>Zonas con más incidencias</h2></div><div class="chart-box h260"><canvas id="ch-zonas" aria-label="Casos por zona" role="img"></canvas></div></section>
+<section class="panel card"><div class="card-head"><h2>Recorrido por estado</h2></div><div class="chart-box h260"><canvas id="ch-estados" aria-label="Casos por estado" role="img"></canvas></div></section>
+<section class="panel card"><div class="card-head"><h2>Carga por responsable</h2></div><div class="chart-box h260"><canvas id="ch-resp" aria-label="Casos abiertos por responsable" role="img"></canvas></div></section>
+<section class="panel card wide full"><div class="card-head"><h2>Requieren atención ahora</h2><a class="muted-link" href="{% url 'bandeja' %}?estado=escalados">Ver todos</a></div>
+{% if atencion %}<ul class="attn">{% for c in atencion %}
+<li><a href="{% url 'detalle' c.pk %}" class="attn-row p-{{ c.prioridad|lower }}"><span class="attn-bar"></span>
+<span class="attn-main"><strong>{{ c.descripcion|truncatechars:80 }}</strong><small>{{ c.zona }} · {{ c.edificio }} · {{ c.creado|timesince }}</small></span>
+<span class="tag {{ c.prioridad|lower }}">{{ c.prioridad }}</span>{% if c.escalado %}<span class="tag esc">Escalado</span>{% endif %}
+<span class="who">{% if c.responsable %}<i class="mini-av">{{ c.responsable|stringformat:"s"|inicial }}</i>{% else %}<i class="mini-av none">?</i>{% endif %}</span></a></li>{% endfor %}</ul>
+{% else %}<div class="empty"><h2>Todo en orden</h2><p>No hay casos de prioridad alta abiertos.</p></div>{% endif %}
+</section>
+</div>
+{% if antiguos %}<p class="note-strip">⏳ {{ antiguos }} caso{{ antiguos|pluralize }} abierto{{ antiguos|pluralize }} lleva{{ antiguos|pluralize:",n" }} 15 días o más.</p>{% endif %}
+{{ datos|json_script:"datos-panel" }}
+{% endblock %}

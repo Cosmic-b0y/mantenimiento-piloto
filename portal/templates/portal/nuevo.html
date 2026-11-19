@@ -1,23 +1,39 @@
 {% extends "portal/base.html" %}
 {% block title %}Nuevo reporte · Mantenimiento ETDA{% endblock %}
 {% block content %}
-<div class="narrow">
 <a class="back" href="{% url 'bandeja' %}">← Volver a la bandeja</a>
 <div class="heading"><div><h1>Nuevo reporte</h1><p>Indica dónde ocurre la falla y describe lo que observaste.</p></div></div>
+<div class="new-layout">
 <form method="post" enctype="multipart/form-data" class="panel form-card">
 {% csrf_token %}{{ form.non_field_errors }}
+<ol class="form-steps" aria-hidden="true"><li class="on">1 · Ubicación</li><li>2 · Descripción</li><li>3 · Foto</li></ol>
 <fieldset><legend>Ubicación</legend><div class="form-grid">
 <div class="field">{{ form.edificio.label_tag }}{{ form.edificio }}{{ form.edificio.errors }}</div>
 <div class="field">{{ form.zona.label_tag }}{{ form.zona }}{{ form.zona.errors }}</div>
 </div><div class="field">{{ form.activo.label_tag }}{{ form.activo }}{{ form.activo.errors }}</div></fieldset>
 <fieldset><legend>Descripción de la incidencia</legend>
 <div class="field">{{ form.descripcion.label_tag }}{{ form.descripcion }}{{ form.descripcion.errors }}
-<div class="field-meta"><small>Describe el objeto, la falla y cuándo la observaste.</small><small id="description-count" aria-live="off">0 / 2500</small></div></div>
-<div class="field upload-field">{{ form.evidencia.label_tag }}{{ form.evidencia }}{{ form.evidencia.errors }}
+<div class="chips" role="group" aria-label="Ejemplos para empezar"><span>Ejemplos:</span>
+<button type="button" class="chip" data-ejemplo="El apagador de la entrada saca chispitas cuando se enciende.">Apagador con chispas</button>
+<button type="button" class="chip" data-ejemplo="Hay una gotera en el techo y cae agua junto a los contactos.">Gotera junto a contactos</button>
+<button type="button" class="chip" data-ejemplo="La loseta del pasillo está levantada y la gente tropieza.">Loseta levantada</button>
+<button type="button" class="chip" data-ejemplo="La puerta del laboratorio no cierra bien y la chapa está floja.">Puerta que no cierra</button></div>
+<div class="field-meta"><small>Describe el objeto, la falla y cuándo la observaste.</small><small id="description-count" aria-live="off">0 / 2500</small></div>
+<div class="meter" aria-hidden="true"><i id="detail-meter"></i></div><small id="detail-hint" class="hint">Cuanto más específico, más rápido se atiende.</small></div>
+<div class="field upload-field" id="dropzone">{{ form.evidencia.label_tag }}{{ form.evidencia }}{{ form.evidencia.errors }}
+<div class="drop-hint"><span aria-hidden="true">📷</span> Arrastra una foto aquí o elige un archivo</div>
 <small>JPG o PNG, hasta 5 MB.</small><img id="photo-preview" alt="Vista previa de la foto adjunta" hidden></div>
 </fieldset>
 <div class="form-actions"><a class="button secondary" href="{% url 'bandeja' %}">Cancelar</a>
 <button class="button">Enviar reporte</button></div>
 </form>
+<aside class="panel tips section"><h2>Para atenderte más rápido</h2>
+<ul class="tips-list">
+<li><b>Qué</b><span>El objeto que falla: apagador, loseta, puerta, tubería…</span></li>
+<li><b>Dónde</b><span>Aula o zona, y el código del activo si lo conoces.</span></li>
+<li><b>Cuándo</b><span>Desde cuándo pasa y si empeora.</span></li>
+<li><b>Riesgo</b><span>Chispas, agua cerca de contactos, caídas o algo que se desprende. Menciónalo.</span></li>
+</ul>
+<p class="muted small-note">Tu reporte lo revisa una persona de mantenimiento. El sistema solo sugiere una prioridad preliminar.</p></aside>
 </div>
 {% endblock %}

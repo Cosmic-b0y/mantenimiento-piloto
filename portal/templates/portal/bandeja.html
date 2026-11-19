@@ -16,13 +16,14 @@
 {% endif %}
 <section class="panel">
 <div class="list-heading"><h2>Registro de incidencias <span class="count">{{ pagina.paginator.count }}</span></h2><span class="muted">{% if user.is_staff %}Prioridad más alta primero{% else %}Más recientes primero{% endif %}</span></div>
-<div class="view-tabs" aria-label="Vistas de incidencias">
+<div class="view-bar"><div class="view-tabs" aria-label="Vistas de incidencias">
 <a href="{% querystring estado='' pagina=None %}" {% if not estado %}aria-current="page"{% endif %}>Todas</a>
 {% if user.is_staff %}<a href="{% querystring estado='revision' pagina=None %}" {% if estado == "revision" %}aria-current="page"{% endif %}>Por revisar</a>{% endif %}
 <a href="{% querystring estado='atencion' pagina=None %}" {% if estado == "atencion" %}aria-current="page"{% endif %}>En atención</a>
 <a href="{% querystring estado='cerrado' pagina=None %}" {% if estado == "cerrado" %}aria-current="page"{% endif %}>Cerradas</a>
 </div>
-<form class="filters" method="get">
+<div class="seg" role="group" aria-label="Forma de ver los casos"><a href="{% querystring vista='lista' pagina=None %}" {% if vista == "lista" %}aria-current="true"{% endif %}>☰ Lista</a><a href="{% querystring vista='tablero' pagina=None %}" {% if vista == "tablero" %}aria-current="true"{% endif %}>▦ Tablero</a></div></div>
+<form class="filters" method="get" id="filtros">
 <label>Buscar <input name="q" value="{{ consulta }}" placeholder="Folio, ubicación o descripción"></label>
 <label>Estado <select name="estado">
 <option value="">Todos</option>
@@ -31,15 +32,22 @@
 </select></label>
 {% if user.is_staff %}<label>Prioridad <select name="prioridad"><option value="">Todas</option>
 {% for valor in prioridades %}<option{% if prioridad == valor %} selected{% endif %}>{{ valor }}</option>{% endfor %}</select></label>{% endif %}
-<button class="button secondary">Filtrar</button>
+<input type="hidden" name="vista" value="{{ vista }}"><button class="button secondary">Filtrar</button>
 {% if estado or consulta or prioridad %}<a class="clear" href="{% url 'bandeja' %}">Limpiar</a>{% endif %}
 </form>
-{% if pagina.object_list %}
+<div id="resultados">
+{% if vista == "tablero" %}
+<div class="board" aria-label="Tablero por estado">
+{% for col in columnas %}<section class="col col-{{ col.valor }}"><header><h3>{{ col.etiqueta }}</h3><span class="count">{{ col.total }}</span>{% if col.urgentes %}<span class="urg" title="Prioridad alta o escalados">{{ col.urgentes }} ▲</span>{% endif %}</header>
+{% for caso in col.casos %}<a class="card-case p-{{ caso.prioridad|lower }}" href="{% url 'detalle' caso.pk %}"><span class="cc-top"><span class="tag {{ caso.prioridad|lower }}">{{ caso.prioridad }}</span>{% if caso.escalado %}<span class="tag esc">Escalado</span>{% endif %}<small class="folio">{{ caso.folio }}</small></span><strong>{{ caso.descripcion|truncatechars:90 }}</strong><span class="cc-foot"><small>{{ caso.zona }}</small><small>{{ caso.creado|timesince }}</small>{% if caso.responsable %}<i class="mini-av" title="{{ caso.responsable }}">{{ caso.responsable|stringformat:"s"|first|upper }}</i>{% else %}<i class="mini-av none" title="Sin asignar">?</i>{% endif %}</span></a>{% empty %}<p class="col-empty">Sin casos</p>{% endfor %}
+{% if col.total > 30 %}<p class="col-empty">Se muestran 30 · filtra para ver más</p>{% endif %}</section>{% endfor %}
+</div>
+{% elif pagina.object_list %}
 <div class="table-wrap">
 <table><thead><tr><th>Reporte</th><th>Ubicación</th><th>Estado</th>{% if user.is_staff %}<th>Prioridad</th><th>Responsable</th>{% endif %}<th>Fecha</th></tr></thead>
 <tbody>
 {% for caso in pagina %}
-<tr class="{% if caso.escalado %}row-escalated{% endif %}"><td data-label="Reporte"><a class="report-link" href="{% url 'detalle' caso.pk %}">{{ caso.descripcion|truncatechars:67 }}</a><small class="folio">{{ caso.folio }}</small></td>
+<tr class="{% if caso.escalado %}row-escalated{% endif %} p-{{ caso.prioridad|lower }}"><td data-label="Reporte"><a class="report-link" href="{% url 'detalle' caso.pk %}">{{ caso.descripcion|truncatechars:67 }}</a><small class="folio">{{ caso.folio }}</small></td>
 <td data-label="Ubicación">{{ caso.zona }}<small>{{ caso.edificio }}</small></td>
 <td data-label="Estado"><span class="tag status-{{ caso.estado }}">{{ caso.get_estado_display }}</span></td>
 {% if user.is_staff %}<td data-label="Prioridad"><span class="tag {{ caso.prioridad|lower }}">{{ caso.prioridad }}</span>{% if caso.escalado %}<small class="alert-text">Escalado · revisar</small>{% endif %}</td>
@@ -50,11 +58,12 @@
 </div>
 {% else %}<div class="empty"><h2>Sin reportes para mostrar</h2>
 <p>{% if estado or consulta or prioridad %}Ajusta los filtros para ampliar la búsqueda.{% else %}Los reportes registrados aparecerán aquí con su estado.{% endif %}</p></div>{% endif %}
-{% if pagina.has_other_pages %}<div class="pagination">
+{% if vista == "lista" and pagina.has_other_pages %}<div class="pagination">
 {% if pagina.has_previous %}<a href="{% querystring pagina=pagina.previous_page_number %}">Anterior</a>{% endif %}
 <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
 {% if pagina.has_next %}<a href="{% querystring pagina=pagina.next_page_number %}">Siguiente</a>{% endif %}
 </div>{% endif %}
+</div>
 </section>
 {% endblock %}
 

@@ -1,11 +1,15 @@
 {% extends "portal/base.html" %}
 {% block title %}Iniciar sesión · Mantenimiento ETDA{% endblock %}
 {% block content %}
-<div class="login panel section">
-<h1>Iniciar sesión</h1><p class="muted">Accede con tu cuenta del piloto.</p>
+<div class="login-split panel">
+<div class="login-hero"><span class="brand-icon big" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M9 9h1m4 0h1m-6 3h1m4 0h1"/></svg></span>
+<h2>Reporta, prioriza y da seguimiento a las fallas del campus</h2>
+<ul><li>Describe el problema con tus palabras</li><li>El sistema sugiere categoría y prioridad</li><li>Una persona de mantenimiento revisa y confirma</li></ul>
+<small>Piloto académico · datos simulados</small></div>
+<div class="login-form"><h1>Iniciar sesión</h1><p class="muted">Accede con tu cuenta del piloto.</p>
 <form class="stack" method="post">{% csrf_token %}{{ form.non_field_errors }}
 {% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
 <input type="hidden" name="next" value="{{ next }}">
-<button class="button">Entrar</button></form>
+<button class="button">Entrar</button></form></div>
 </div>
 {% endblock %}
