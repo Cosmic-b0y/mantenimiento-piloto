@@ -1,15 +1,22 @@
 {% extends "portal/base.html" %}
+{% load ui %}
 {% block title %}Caso {{ caso.folio }} · Mantenimiento ETDA{% endblock %}
 {% block content %}
 <a class="back" href="{% url 'bandeja' %}">{% if user.is_staff %}← Volver a la bandeja{% else %}← Volver a mis reportes{% endif %}</a>
 <div class="heading"><div><p class="folio">{{ caso.folio }}</p><h1>Incidencia en {{ caso.zona }}</h1><p>{{ caso.edificio }} · {{ caso.creado|date:"d M Y, H:i" }}</p></div>
 <span class="tag status-{{ caso.estado }}">{{ caso.get_estado_display }}</span></div>
-{% if caso.escalado and user.is_staff %}<p class="risk">Revisión prioritaria sugerida · {{ caso.decision.area }}</p>{% endif %}
+<ol class="stepper" aria-label="Avance del caso">{% for etiqueta, clase in caso.estado|pasos %}<li class="{{ clase }}"><span>{{ forloop.counter }}</span>{{ etiqueta }}</li>{% endfor %}</ol>
+{% if caso.estado == "informacion" %}<p class="hint-info">Se solicitó información adicional para continuar.</p>{% endif %}
+{% if user.is_staff %}<section class="hero-case p-{{ caso.prioridad|lower }}" aria-label="Resumen del análisis">
+<div class="hc-main"><span class="hc-label">Prioridad</span><strong class="hc-prio">{{ caso.prioridad }}</strong>{% if caso.escalado %}<span class="tag esc">Escalado · {{ caso.decision.area }}</span>{% else %}<small>{{ caso.decision.area }}</small>{% endif %}</div>
+<div class="hc-gauge"><div class="ring" style="--p:{{ caso.decision.confianza }}" role="img" aria-label="Puntuación del clasificador {{ caso.decision.confianza }} %"><b>{{ caso.decision.confianza }}%</b></div><small>Puntuación del<br>clasificador</small></div>
+<div class="hc-sig"><span class="hc-label">Señales detectadas</span>{% with sen=caso.decision.evidencia_textual|senales_activas %}{% if sen %}<div class="sig-list">{% for clase, nombre in sen %}<span class="sig-pill {{ clase }}">{{ nombre }}</span>{% endfor %}</div>{% else %}<small>Sin señales de riesgo</small>{% endif %}{% endwith %}</div>
+</section>{% endif %}
 <nav class="detail-nav" aria-label="Secciones del caso"><a href="#reporte">Reporte</a>{% if user.is_staff %}<a href="#sugerencia">Análisis del agente</a><a href="#revision">Revisión</a>{% endif %}<a href="#historial">Historial</a></nav>
 <div class="detail">
 <div class="stack">
 <section class="panel section" id="reporte"><h2>Reporte original</h2>
-<p class="preserve">{{ caso.descripcion }}</p>
+{% if user.is_staff %}<p class="preserve quote">{{ caso.descripcion|resaltar:caso.decision.evidencia_textual }}</p>{% if caso.decision.evidencia_textual %}<p class="muted small-note">Las palabras resaltadas activaron señales del análisis.</p>{% endif %}{% else %}<p class="preserve quote">{{ caso.descripcion }}</p>{% endif %}
 {% if caso.activo %}<p class="muted">Activo {{ caso.activo }}</p>{% endif %}
 {% if caso.evidencia %}<a href="{% url 'evidencia' caso.pk %}">Descargar fotografía adjunta</a>{% endif %}
 </section>
@@ -19,7 +26,7 @@
 <div><dt>Prioridad preliminar</dt><dd><span class="tag {{ caso.decision.prioridad|lower }}">{{ caso.decision.prioridad }}</span></dd></div>
 <div><dt>Puntuación del clasificador</dt><dd>{{ caso.decision.confianza }} %</dd></div>
 <div><dt>Área sugerida</dt><dd>{{ caso.decision.area }}</dd></div></dl>
-{% if caso.decision.reglas %}<p class="muted">Reglas aplicadas · {{ caso.decision.reglas|join:", " }}</p>{% endif %}
+{% if caso.decision.reglas %}<div class="rules"><span class="muted">Reglas aplicadas</span>{% for r in caso.decision.reglas %}{% regla r %}{% endfor %}</div>{% endif %}
 <ul class="reasons">{% for motivo in caso.decision.motivos_prioridad %}<li>{{ motivo|capfirst }}</li>{% endfor %}
 {% for motivo in caso.decision.motivos_revision %}<li>{{ motivo|capfirst }}</li>{% endfor %}</ul>
 </section>

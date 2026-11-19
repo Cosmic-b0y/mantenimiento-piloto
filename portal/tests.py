@@ -82,3 +82,42 @@ class FlujoDeMantenimiento(TestCase):
         for texto in ("Ya se cayó una maestra en las escaleras.", "La coladera está sin tapa."):
             decision = analizar(texto, "Aula 204", "", None, {})
             self.assertFalse(decision["escalamiento"])
+
+
+class VistasVisuales(TestCase):
+    def setUp(self):
+        usuarios = get_user_model().objects
+        self.reportante = usuarios.create_user("estudiante")
+        self.personal = usuarios.create_user("mantenimiento", is_staff=True)
+
+    def crear(self, texto):
+        self.client.force_login(self.reportante)
+        self.client.post(reverse("nuevo"), {"edificio": "Edificio académico", "zona": "Aula 204",
+                                            "activo": "ELE-204", "descripcion": texto})
+        return Caso.objects.latest("creado")
+
+    def test_formulario_nuevo_no_muestra_errores_al_abrir(self):
+        self.client.force_login(self.reportante)
+        self.assertNotContains(self.client.get(reverse("nuevo")), "Este campo es obligatorio")
+
+    def test_panel_solo_para_personal(self):
+        self.client.force_login(self.reportante)
+        self.assertRedirects(self.client.get(reverse("panel")), reverse("bandeja"))
+        self.client.force_login(self.personal)
+        respuesta = self.client.get(reverse("panel"))
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn("prioridad", respuesta.context["datos"])
+
+    def test_tablero_agrupa_por_estado(self):
+        self.crear("El apagador de la entrada saca chispitas.")
+        self.client.force_login(self.personal)
+        respuesta = self.client.get(reverse("bandeja"), {"vista": "tablero"})
+        columnas = {c["valor"]: c["total"] for c in respuesta.context["columnas"]}
+        self.assertEqual(columnas[Estado.PENDIENTE], 1)
+
+    def test_resaltado_marca_palabras_de_riesgo_y_escapa_html(self):
+        caso = self.crear("El apagador saca chispitas <script>x</script>")
+        self.client.force_login(self.personal)
+        pagina = self.client.get(reverse("detalle", args=[caso.pk])).content.decode()
+        self.assertIn("<mark", pagina)
+        self.assertNotIn("<script>x</script>", pagina)

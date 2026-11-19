@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from collections import Counter
+from datetime import timedelta
 from django.db import transaction
 from django.db.models import Case, F, Q, Value, When
 from django.http import FileResponse, Http404, HttpResponseForbidden
@@ -48,9 +50,18 @@ def bandeja(request):
         filas = filas.order_by(cerrados, "-escalado", "-nivel", "creado")
     else:
         filas = filas.order_by("-creado")
+    vista = "tablero" if request.GET.get("vista") == "tablero" else "lista"
+    columnas = []
+    if vista == "tablero":
+        lista = list(filas[:150])
+        for valor, etiqueta in Estado.choices:
+            tarjetas = [c for c in lista if c.estado == valor]
+            columnas.append({"valor": valor, "etiqueta": etiqueta, "casos": tarjetas[:30], "total": len(tarjetas),
+                             "urgentes": sum(1 for c in tarjetas if c.escalado or c.nivel >= NIVEL["Alta"])})
     pagina = Paginator(filas, 20).get_page(request.GET.get("pagina"))
     abiertos = base.exclude(estado=Estado.CERRADO)
     return render(request, "portal/bandeja.html", {
+        "vista": vista, "columnas": columnas,
         "pagina": pagina, "estados": Estado.choices, "prioridades": PRIORIDADES,
         "estado": estado, "prioridad": prioridad, "consulta": consulta,
         "revision": abiertos.filter(estado__in=[Estado.PENDIENTE, Estado.INFORMACION]).count(),
@@ -63,7 +74,8 @@ def bandeja(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def nuevo(request):
-    form = ReporteForm(request.POST if request.method == "POST" else None, request.FILES)
+    form = ReporteForm(request.POST if request.method == "POST" else None,
+                       request.FILES if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
         caso = form.save(commit=False)
         caso.reportante = request.user
@@ -180,3 +192,45 @@ def ampliar(request, pk):
     else:
         messages.error(request, "El caso ya no está esperando información.")
     return redirect("detalle", pk=pk)
+
+
+@login_required
+def panel(request):
+    """Resumen visual para el personal de mantenimiento."""
+    if not request.user.is_staff:
+        return redirect("bandeja")
+    ahora = timezone.now()
+    todos = list(Caso.objects.select_related("responsable").order_by("-creado"))
+    abiertos = [c for c in todos if c.estado != Estado.CERRADO]
+    cerrados = len(todos) - len(abiertos)
+    prioridad = Counter(c.prioridad for c in abiertos)
+    categorias = Counter(CATEGORIAS.get(c.categoria_confirmada or c.decision["categoria"], "Otra") for c in abiertos)
+    estados = Counter(c.estado for c in todos)
+    zonas = Counter(f"{c.zona}" for c in abiertos).most_common(6)
+    dias = [(ahora - timedelta(days=i)).date() for i in range(13, -1, -1)]
+    por_dia = Counter(timezone.localtime(c.creado).date() for c in todos)
+    esc_dia = Counter(timezone.localtime(c.creado).date() for c in todos if c.escalado or c.nivel == NIVEL["Inmediata"])
+    revisiones = sorted((c.primera_revision - c.creado).total_seconds() / 3600 for c in todos if c.primera_revision)
+    mediana = revisiones[len(revisiones) // 2] if revisiones else None
+    atencion = [c for c in abiertos if c.escalado or c.nivel >= NIVEL["Alta"]]
+    atencion.sort(key=lambda c: (-int(c.escalado), -c.nivel, c.creado))
+    datos = {
+        "prioridad": {p: prioridad.get(p, 0) for p in reversed(PRIORIDADES)},
+        "categorias": dict(categorias.most_common()),
+        "dias": [d.strftime("%d %b") for d in dias],
+        "creados": [por_dia.get(d, 0) for d in dias],
+        "criticos": [esc_dia.get(d, 0) for d in dias],
+        "zonas": {z: n for z, n in zonas},
+        "estados": {label: estados.get(valor, 0) for valor, label in Estado.choices},
+        "responsables": dict(Counter((str(c.responsable) if c.responsable else "Sin asignar") for c in abiertos).most_common(6)),
+    }
+    return render(request, "portal/panel.html", {
+        "datos": datos, "total": len(todos), "abiertos": len(abiertos), "cerrados": cerrados,
+        "tasa_cierre": round(100 * cerrados / len(todos)) if todos else 0,
+        "escalados": sum(1 for c in abiertos if c.escalado),
+        "sin_asignar": sum(1 for c in abiertos if c.responsable_id is None),
+        "mediana_horas": None if mediana is None else round(mediana, 1),
+        "antiguos": sum(1 for c in abiertos if (ahora - c.creado).days >= 15),
+        "atencion": atencion[:6],
+        "nuevos_hoy": por_dia.get(timezone.localtime(ahora).date(), 0),
+    })
